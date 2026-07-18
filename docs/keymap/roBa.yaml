@@ -11,12 +11,12 @@ layers:
   - {t: I, h: SCROLL}
   - O
   - P
-  - A
+  - {t: A, h: LCTRL}
   - S
   - D
   - F
   - G
-  - Sft+Gui+S
+  - Gui+Sft+4
   - '-'
   - H
   - J
@@ -36,58 +36,58 @@ layers:
   - .
   - /
   - LCTRL
-  - LEFT WIN
   - LEFT ALT
-  - {t: '&to_layer_0 INT_HENKAN', h: '6'}
+  - LEFT COMMAND
+  - {t: '&to_layer_0 LANG1', h: '6'}
   - {t: SPACE, h: NUM}
-  - {t: '&to_layer_0 INT_MUHENKAN', h: ARROW}
+  - {t: '&to_layer_0 LANG2', h: ARROW}
   - BACKSPACE
   - {t: ENTER, h: FUNCTION}
   - DEL
   FUNCTION:
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
   - F1
   - F2
   - F3
   - F4
   - F5
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - F13
   - F6
   - F7
   - F8
   - F9
   - F10
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
   - F11
+  - F12
+  - F13
+  - BRI DN
+  - BRI UP
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - Gui+[
+  - {t: ▽, type: trans}
+  - Gui+]
+  - {t: ▽, type: trans}
+  - MUTE
+  - VOL DN
+  - VOL UP
+  - PP
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - Ctl+SPACE
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
   - {type: held}
-  - F12
+  - {t: ▽, type: trans}
   NUM:
   - '-'
   - KP 7
@@ -104,7 +104,7 @@ layers:
   - KP 5
   - KP 6
   - '*'
-  - Ctl+Alt+KP 0
+  - {t: ▽, type: trans}
   - _
   - '!'
   - '@'
@@ -133,15 +133,15 @@ layers:
   - {t: ▽, type: trans}
   - '|'
   ARROW:
-  - ESCAPE
+  - '&esc_eisuu'
   - Ctl+Sft+TAB
   - UP ARROW
   - Ctl+TAB
   - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
+  - Gui+R
+  - Gui+B
+  - Gui+U
+  - Gui+.
   - {t: ▽, type: trans}
   - HOME
   - LEFT ARROW
@@ -150,10 +150,10 @@ layers:
   - END
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
+  - Ctl+Gui+LEFT ARROW
+  - Ctl+Gui+RIGHT ARROW
+  - Gui+Sft+O
+  - Gui+Sft+J
   - {t: ▽, type: trans}
   - LEFT SHIFT
   - Gui+Sft+LEFT ARROW
@@ -265,9 +265,9 @@ layers:
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
   '6':
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
+  - '&esc_eisuu'
+  - '~'
+  - '`'
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
   - {t: BT, h: '0'}
@@ -275,6 +275,7 @@ layers:
   - {t: BT, h: '2'}
   - {t: BT, h: '3'}
   - {t: BT, h: '4'}
+  - TAB
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
@@ -282,10 +283,9 @@ layers:
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
+  - Ctl+Gui+H
+  - Gui+SPACE
+  - Ctl+Gui+L
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
   - '1'
@@ -314,7 +314,9 @@ combos:
 - p: [12, 13]
   k: Sft+TAB
 - p: [11, 10]
-  k: '&to_layer_0 INT_MUHENKAN'
+  k: '&to_layer_0 LANG2'
+- p: [0, 1]
+  k: '&esc_eisuu'
 - p: [20, 21]
   k: '"'
 - p: [24, 25]
