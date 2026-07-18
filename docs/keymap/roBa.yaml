@@ -36,8 +36,8 @@ layers:
   - .
   - /
   - LCTRL
-  - LEFT COMMAND
   - LEFT ALT
+  - LEFT COMMAND
   - {t: '&to_layer_0 LANG1', h: '6'}
   - {t: SPACE, h: NUM}
   - {t: '&to_layer_0 LANG2', h: ARROW}

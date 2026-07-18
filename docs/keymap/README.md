@@ -23,7 +23,7 @@ macOS + US 配列を前提に、dotfiles の運用(左右⌘での IME 切り替
 ## デフォルトレイヤー(0)
 
 - **配列**: QWERTY。US 配列前提
-- **親指行(左)**: `Ctrl` / `Cmd` / `Alt` / `かな` / `Space` / `英数`
+- **親指行(左)**: `Ctrl` / `Alt` / `Cmd` / `かな` / `Space` / `英数`(Mac 内蔵キーボードと同じ並び)
 - **親指行(右)**: `Backspace` / `Enter` / `Del`
 
 ### IME 切り替え
