@@ -1,3 +1,5 @@
 # zmk-config-roBa
 
-<img src="keymap-drawer/roBa.svg" >
+キーマップの詳細は [docs/keymap/](docs/keymap/README.md) を参照。
+
+<img src="docs/keymap/roBa.svg" >

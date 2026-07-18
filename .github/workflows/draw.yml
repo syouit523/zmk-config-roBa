@@ -20,5 +20,5 @@ jobs:
       keymap_patterns: "config/*.keymap"
       json_path: "config"
       config_path: "keymap_drawer.config.yaml" # config file, ignored if not exists
-      output_folder: "keymap-drawer"
+      output_folder: "docs/keymap"
       destination: "both"
