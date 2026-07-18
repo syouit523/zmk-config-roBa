@@ -283,9 +283,9 @@ layers:
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
+  - Ctl+Gui+H
+  - Gui+SPACE
+  - Ctl+Gui+L
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
   - '1'
