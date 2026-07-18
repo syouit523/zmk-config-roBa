@@ -11,12 +11,12 @@ layers:
   - {t: I, h: SCROLL}
   - O
   - P
-  - A
+  - {t: A, h: LCTRL}
   - S
   - D
   - F
   - G
-  - Sft+Gui+S
+  - Gui+Sft+4
   - '-'
   - H
   - J
@@ -36,17 +36,17 @@ layers:
   - .
   - /
   - LCTRL
-  - LEFT WIN
+  - LEFT COMMAND
   - LEFT ALT
-  - {t: '&to_layer_0 INT_HENKAN', h: '6'}
+  - {t: '&to_layer_0 LANG1', h: '6'}
   - {t: SPACE, h: NUM}
-  - {t: '&to_layer_0 INT_MUHENKAN', h: ARROW}
+  - {t: '&to_layer_0 LANG2', h: ARROW}
   - BACKSPACE
   - {t: ENTER, h: FUNCTION}
   - DEL
   FUNCTION:
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
+  - BRI DN
+  - BRI UP
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
@@ -55,10 +55,10 @@ layers:
   - F3
   - F4
   - F5
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
+  - MUTE
+  - VOL DN
+  - VOL UP
+  - PP
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
   - F13
@@ -83,7 +83,7 @@ layers:
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
+  - Ctl+SPACE
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
   - {type: held}
@@ -104,7 +104,7 @@ layers:
   - KP 5
   - KP 6
   - '*'
-  - Ctl+Alt+KP 0
+  - {t: ▽, type: trans}
   - _
   - '!'
   - '@'
@@ -133,15 +133,15 @@ layers:
   - {t: ▽, type: trans}
   - '|'
   ARROW:
-  - ESCAPE
+  - '&esc_eisuu'
   - Ctl+Sft+TAB
   - UP ARROW
   - Ctl+TAB
   - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
+  - Gui+R
+  - Gui+B
+  - Gui+U
+  - Gui+.
   - {t: ▽, type: trans}
   - HOME
   - LEFT ARROW
@@ -150,10 +150,10 @@ layers:
   - END
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
+  - Ctl+Gui+LEFT ARROW
+  - Ctl+Gui+RIGHT ARROW
+  - Gui+Sft+O
+  - Gui+Sft+J
   - {t: ▽, type: trans}
   - LEFT SHIFT
   - Gui+Sft+LEFT ARROW
@@ -314,7 +314,9 @@ combos:
 - p: [12, 13]
   k: Sft+TAB
 - p: [11, 10]
-  k: '&to_layer_0 INT_MUHENKAN'
+  k: '&to_layer_0 LANG2'
+- p: [0, 1]
+  k: '&esc_eisuu'
 - p: [20, 21]
   k: '"'
 - p: [24, 25]
