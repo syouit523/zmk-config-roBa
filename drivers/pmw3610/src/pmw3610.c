@@ -787,87 +787,114 @@ static int pmw3610_report_data(const struct device *dev) {
     return err;
 }
 
-/* ---- DIAG: 調査用。割り込み回数を数え、割り込みが来ていないときはセンサーを直接読んでログに出す ---- */
-static atomic_t diag_irq_count;
-static uint32_t diag_last_irq_count;
-static struct k_work_delayable diag_work;
-static const struct device *diag_dev;
-static uint32_t diag_dark_count;
-static uint32_t diag_reinit_count;
-static uint32_t diag_ticks_since_reinit;
+/*
+ * 起動不良からの自動復帰 (roBa 独自の追加)
+ *
+ * この個体のセンサーは、電源投入直後に次のどちらかの状態で立ち上がることがある。
+ *   - 自己診断に失敗して初期化が止まる
+ *   - 初期化は成功するが、SQUAL が 0・シャッターが上限のまま (ボール表面が見えていない)
+ * どちらも通電から数分経つまでは初期化し直しても戻らないため、正常な読み取りが確認できるまで
+ * 短い間隔で初期化をやり直す。正常を確認したあとは、長い間隔の見回りだけを続ける。
+ */
+#define RECOVERY_CHECK_MS 1000        /* 復帰待ちの間の確認間隔 */
+#define RECOVERY_IDLE_CHECK_MS 60000  /* 正常確認後の見回り間隔 */
+#define RECOVERY_DARK_CHECKS 2        /* 何回続けて「見えていない」なら初期化をやり直すか */
+#define RECOVERY_FAST_ATTEMPTS 150    /* この回数を超えたら間隔を空ける (ボールを外したまま等) */
+#define RECOVERY_SLOW_RETRY_MS 30000
+#define RECOVERY_SQUAL_MAX 2          /* これ以下なら表面が見えていないとみなす */
+#define RECOVERY_SHUTTER_MIN 0x1d0    /* これ以上ならシャッターが上限に張り付いているとみなす */
 
-static void diag_work_cb(struct k_work *work) {
-    const struct device *dev = diag_dev;
+static atomic_t recovery_irq_count;
+static uint32_t recovery_last_irq_count;
+static uint32_t recovery_dark_checks;
+static uint32_t recovery_attempts;
+static bool recovery_healthy;
+static struct k_work_delayable recovery_work;
+static const struct device *recovery_dev;
+
+static void recovery_restart_init(const struct device *dev, bool power_cycle) {
     struct pixart_data *data = dev->data;
-    const struct pixart_config *config = dev->config;
-    uint32_t irqs = (uint32_t)atomic_get(&diag_irq_count);
-    int pin = gpio_pin_get_dt(&config->irq_gpio);
+
+    set_interrupt(dev, false);
+    data->ready = false;
+    data->err = 0;
+    data->sw_smart_flag = false;
+
+    if (power_cycle) {
+        /* リセット命令だけでは戻らないことがあるので、シャットダウンしてから起こし直す */
+        reg_write(dev, PMW3610_REG_SHUTDOWN, PMW3610_SHUTDOWN_CMD_ENABLE);
+        k_msleep(500);
+        reg_write(dev, PMW3610_REG_POWER_UP_RESET, PMW3610_POWERUP_CMD_WAKEUP);
+        k_msleep(100);
+    }
+
+    data->async_init_step = ASYNC_INIT_STEP_POWER_UP;
+    k_work_schedule(&data->init_work, K_MSEC(10));
+}
+
+static void recovery_work_cb(struct k_work *work) {
+    const struct device *dev = recovery_dev;
+    struct pixart_data *data = dev->data;
+    uint32_t irqs = (uint32_t)atomic_get(&recovery_irq_count);
+    bool retry = false;
 
     if (!data->ready) {
-        LOG_INF("DIAG ready=0 step=%d err=%d irq=%u pin=%d", data->async_init_step, data->err, irqs,
-                pin);
-        /* 対策の試験: 初期化が失敗して止まっていたら、最初からやり直す */
-        diag_ticks_since_reinit++;
-        if (data->err && (diag_reinit_count < 5 || diag_ticks_since_reinit >= 15)) {
-            diag_reinit_count++;
-            diag_ticks_since_reinit = 0;
-            LOG_WRN("DIAG init failed (err=%d), re-init #%u", data->err, diag_reinit_count);
-            data->err = 0;
-            data->async_init_step = ASYNC_INIT_STEP_POWER_UP;
-            k_work_schedule(&data->init_work, K_MSEC(10));
+        /* 初期化の途中なら待つ。失敗して止まっているならやり直す */
+        retry = data->err != 0;
+    } else if (irqs != recovery_last_irq_count) {
+        /* 動きを検知できている = 正常 */
+        recovery_dark_checks = 0;
+        if (!recovery_healthy) {
+            LOG_INF("Sensor is tracking (after %u recovery attempts)", recovery_attempts);
         }
-    } else if (irqs != diag_last_irq_count) {
-        LOG_INF("DIAG ready=1 irq=%u (+%u) pin=%d", irqs, irqs - diag_last_irq_count, pin);
+        recovery_healthy = true;
+        recovery_attempts = 0;
     } else {
-        uint8_t pid = 0;
         uint8_t buf[PMW3610_BURST_SIZE] = {0};
-        int e1 = reg_read(dev, PMW3610_REG_PRODUCT_ID, &pid);
-        int e2 = motion_burst_read(dev, buf, sizeof(buf));
-        uint8_t ob = 0;
-        reg_read(dev, PMW3610_REG_OBSERVATION, &ob);
-        LOG_INF("DIAG ready=1 irq=%u (+0) pin=%d pid=0x%02x(e%d) ob=0x%02x burst(e%d)=%02x %02x %02x %02x %02x %02x %02x",
-                irqs, pin, pid, e1, ob, e2, buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6]);
-
-        /* 対策の試験: センサーが「真っ暗」(SQUALほぼ0かつシャッター上限付近)のまま続いたら初期化をやり直す */
+        int err = motion_burst_read(dev, buf, sizeof(buf));
         uint16_t shutter = ((uint16_t)(buf[PMW3610_SHUTTER_H_POS] & 0x01) << 8) |
                            buf[PMW3610_SHUTTER_L_POS];
-        if (e2 == 0 && buf[4] <= 2 && shutter >= 0x1d0) {
-            diag_dark_count++;
-        } else {
-            diag_dark_count = 0;
-        }
-        diag_ticks_since_reinit++;
-        if (diag_dark_count >= 2 && (diag_reinit_count < 3 || diag_ticks_since_reinit >= 15)) {
-            diag_reinit_count++;
-            diag_ticks_since_reinit = 0;
-            diag_dark_count = 0;
-            LOG_WRN("DIAG dark state detected, re-init #%u", diag_reinit_count);
-            set_interrupt(dev, false);
-            data->ready = false;
-            if (diag_reinit_count >= 2) {
-                /* 2回目以降はより強い手段: センサーをシャットダウンしてから起こし直す */
-                int es = reg_write(dev, PMW3610_REG_SHUTDOWN, 0xE7);
-                k_msleep(500);
-                int ew = reg_write(dev, PMW3610_REG_POWER_UP_RESET, PMW3610_POWERUP_CMD_WAKEUP);
-                k_msleep(100);
-                LOG_WRN("DIAG shutdown(e%d) -> wakeup(e%d) done", es, ew);
+        uint8_t squal = buf[PMW3610_SQUAL_POS];
+
+        if (!err && squal <= RECOVERY_SQUAL_MAX && shutter >= RECOVERY_SHUTTER_MIN) {
+            recovery_healthy = false;
+            if (++recovery_dark_checks >= RECOVERY_DARK_CHECKS) {
+                retry = true;
             }
-            data->sw_smart_flag = false;
-            data->async_init_step = ASYNC_INIT_STEP_POWER_UP;
-            k_work_schedule(&data->init_work, K_MSEC(10));
+        } else if (!err) {
+            recovery_dark_checks = 0;
+            if (!recovery_healthy) {
+                LOG_INF("Sensor sees the surface (squal=%u shutter=%u, after %u recovery attempts)",
+                        squal, shutter, recovery_attempts);
+            }
+            recovery_healthy = true;
+            recovery_attempts = 0;
         }
     }
-    diag_last_irq_count = irqs;
-    k_work_schedule(&diag_work, K_MSEC(2000));
+    recovery_last_irq_count = irqs;
+
+    int32_t next_ms = recovery_healthy ? RECOVERY_IDLE_CHECK_MS : RECOVERY_CHECK_MS;
+    if (retry) {
+        recovery_attempts++;
+        recovery_dark_checks = 0;
+        LOG_WRN("Sensor not working (err=%d), re-initializing: attempt %u", data->err,
+                recovery_attempts);
+        /* 初回は通常の初期化だけ、2回目以降はシャットダウンを挟む */
+        recovery_restart_init(dev, recovery_attempts >= 2 && data->err == 0);
+        if (recovery_attempts > RECOVERY_FAST_ATTEMPTS) {
+            next_ms = RECOVERY_SLOW_RETRY_MS;
+        }
+    }
+    k_work_schedule(&recovery_work, K_MSEC(next_ms));
 }
-/* ---- DIAG end ---- */
+
 
 static void pmw3610_gpio_callback(const struct device *gpiob, struct gpio_callback *cb,
                                   uint32_t pins) {
     struct pixart_data *data = CONTAINER_OF(cb, struct pixart_data, irq_gpio_cb);
     const struct device *dev = data->dev;
 
-    atomic_inc(&diag_irq_count);
+    atomic_inc(&recovery_irq_count);
 
     set_interrupt(dev, false);
 
@@ -880,7 +907,10 @@ static void pmw3610_work_callback(struct k_work *work) {
     const struct device *dev = data->dev;
 
     pmw3610_report_data(dev);
-    set_interrupt(dev, true);
+    // 初期化のやり直し中は、初期化が終わった時点で割り込みを有効にし直す
+    if (data->ready) {
+        set_interrupt(dev, true);
+    }
 }
 
 static int pmw3610_init_irq(const struct device *dev) {
@@ -959,10 +989,10 @@ static int pmw3610_init(const struct device *dev) {
 
     k_work_schedule(&data->init_work, K_MSEC(async_init_delay[data->async_init_step]));
 
-    /* DIAG */
-    diag_dev = dev;
-    k_work_init_delayable(&diag_work, diag_work_cb);
-    k_work_schedule(&diag_work, K_MSEC(3000));
+    // 起動不良からの自動復帰の見張りを始める
+    recovery_dev = dev;
+    k_work_init_delayable(&recovery_work, recovery_work_cb);
+    k_work_schedule(&recovery_work, K_MSEC(2000));
 
     return err;
 }
