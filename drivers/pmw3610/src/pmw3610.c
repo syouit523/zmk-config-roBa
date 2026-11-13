@@ -844,6 +844,14 @@ static void diag_work_cb(struct k_work *work) {
             LOG_WRN("DIAG dark state detected, re-init #%u", diag_reinit_count);
             set_interrupt(dev, false);
             data->ready = false;
+            if (diag_reinit_count >= 2) {
+                /* 2回目以降はより強い手段: センサーをシャットダウンしてから起こし直す */
+                int es = reg_write(dev, PMW3610_REG_SHUTDOWN, 0xE7);
+                k_msleep(500);
+                int ew = reg_write(dev, PMW3610_REG_POWER_UP_RESET, PMW3610_POWERUP_CMD_WAKEUP);
+                k_msleep(100);
+                LOG_WRN("DIAG shutdown(e%d) -> wakeup(e%d) done", es, ew);
+            }
             data->sw_smart_flag = false;
             data->async_init_step = ASYNC_INIT_STEP_POWER_UP;
             k_work_schedule(&data->init_work, K_MSEC(10));
