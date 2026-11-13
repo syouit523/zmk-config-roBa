@@ -25,9 +25,3 @@ include:
    shield: roBa_L
  - board: seeeduino_xiao_ble
    shield: settings_reset
- # トラックボール調査用: USBログ付きの右手側ファームウェア(調査が終わったら削除)
- - board: seeeduino_xiao_ble
-   shield: roBa_R
-   snippet: zmk-usb-logging
-   cmake-args: -DCONFIG_ZMK_STUDIO=n -DCONFIG_PMW3610_LOG_LEVEL_DBG=y
-   artifact-name: roBa_R_usb_logging
