@@ -792,6 +792,9 @@ static atomic_t diag_irq_count;
 static uint32_t diag_last_irq_count;
 static struct k_work_delayable diag_work;
 static const struct device *diag_dev;
+static uint32_t diag_dark_count;
+static uint32_t diag_reinit_count;
+static uint32_t diag_ticks_since_reinit;
 
 static void diag_work_cb(struct k_work *work) {
     const struct device *dev = diag_dev;
@@ -812,6 +815,27 @@ static void diag_work_cb(struct k_work *work) {
         int e2 = motion_burst_read(dev, buf, sizeof(buf));
         LOG_INF("DIAG ready=1 irq=%u (+0) pin=%d pid=0x%02x(e%d) burst(e%d)=%02x %02x %02x %02x %02x %02x %02x",
                 irqs, pin, pid, e1, e2, buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6]);
+
+        /* 対策の試験: センサーが「真っ暗」(SQUALほぼ0かつシャッター上限付近)のまま続いたら初期化をやり直す */
+        uint16_t shutter = ((uint16_t)(buf[PMW3610_SHUTTER_H_POS] & 0x01) << 8) |
+                           buf[PMW3610_SHUTTER_L_POS];
+        if (e2 == 0 && buf[4] <= 2 && shutter >= 0x1d0) {
+            diag_dark_count++;
+        } else {
+            diag_dark_count = 0;
+        }
+        diag_ticks_since_reinit++;
+        if (diag_dark_count >= 2 && (diag_reinit_count < 3 || diag_ticks_since_reinit >= 15)) {
+            diag_reinit_count++;
+            diag_ticks_since_reinit = 0;
+            diag_dark_count = 0;
+            LOG_WRN("DIAG dark state detected, re-init #%u", diag_reinit_count);
+            set_interrupt(dev, false);
+            data->ready = false;
+            data->sw_smart_flag = false;
+            data->async_init_step = ASYNC_INIT_STEP_POWER_UP;
+            k_work_schedule(&data->init_work, K_MSEC(10));
+        }
     }
     diag_last_irq_count = irqs;
     k_work_schedule(&diag_work, K_MSEC(2000));
