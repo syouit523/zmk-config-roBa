@@ -806,6 +806,16 @@ static void diag_work_cb(struct k_work *work) {
     if (!data->ready) {
         LOG_INF("DIAG ready=0 step=%d err=%d irq=%u pin=%d", data->async_init_step, data->err, irqs,
                 pin);
+        /* 対策の試験: 初期化が失敗して止まっていたら、最初からやり直す */
+        diag_ticks_since_reinit++;
+        if (data->err && (diag_reinit_count < 5 || diag_ticks_since_reinit >= 15)) {
+            diag_reinit_count++;
+            diag_ticks_since_reinit = 0;
+            LOG_WRN("DIAG init failed (err=%d), re-init #%u", data->err, diag_reinit_count);
+            data->err = 0;
+            data->async_init_step = ASYNC_INIT_STEP_POWER_UP;
+            k_work_schedule(&data->init_work, K_MSEC(10));
+        }
     } else if (irqs != diag_last_irq_count) {
         LOG_INF("DIAG ready=1 irq=%u (+%u) pin=%d", irqs, irqs - diag_last_irq_count, pin);
     } else {
@@ -813,8 +823,10 @@ static void diag_work_cb(struct k_work *work) {
         uint8_t buf[PMW3610_BURST_SIZE] = {0};
         int e1 = reg_read(dev, PMW3610_REG_PRODUCT_ID, &pid);
         int e2 = motion_burst_read(dev, buf, sizeof(buf));
-        LOG_INF("DIAG ready=1 irq=%u (+0) pin=%d pid=0x%02x(e%d) burst(e%d)=%02x %02x %02x %02x %02x %02x %02x",
-                irqs, pin, pid, e1, e2, buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6]);
+        uint8_t ob = 0;
+        reg_read(dev, PMW3610_REG_OBSERVATION, &ob);
+        LOG_INF("DIAG ready=1 irq=%u (+0) pin=%d pid=0x%02x(e%d) ob=0x%02x burst(e%d)=%02x %02x %02x %02x %02x %02x %02x",
+                irqs, pin, pid, e1, ob, e2, buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6]);
 
         /* 対策の試験: センサーが「真っ暗」(SQUALほぼ0かつシャッター上限付近)のまま続いたら初期化をやり直す */
         uint16_t shutter = ((uint16_t)(buf[PMW3610_SHUTTER_H_POS] & 0x01) << 8) |
